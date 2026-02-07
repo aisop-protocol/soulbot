@@ -1,0 +1,42 @@
+[
+  {
+    "role": "system",
+    "content": {
+      "protocol": "AISOP V3.1",
+      "id": "demo.toronto_reporter",
+      "version": "1.0.0",
+      "name": "San Francisco Weather and News Reporter",
+      "description": "An AISOP blueprint that searches for the latest weather and news in San Francisco and reports it.",
+      "verified_on": [
+        "Gemini CLI"
+      ],
+      "tools": [
+        "shell",
+        "search"
+      ],
+      "parameters": {},
+      "summary": "Searches for San Francisco weather and news.",
+      "system_prompt": "Execute blueprints.main"
+    }
+  },
+  {
+    "role": "user",
+    "content": {
+      "instruction": "Execute blueprints['main'].",
+      "blueprints": {
+        "main": "graph TD\\n  A[Search Weather] --> B[Search News]\\n  B --> C[Reply with Information]\\n  C --> endNode((End))"
+      },
+      "functions": {
+        "A": {
+          "step1": "search for 'weather in San Francisco'"
+        },
+        "B": {
+          "step1": "search for 'news in San Francisco'"
+        },
+        "C": {
+          "step1": "Summarize and reply with the weather and news information found in steps A and B."
+        }
+      }
+    }
+  }
+]

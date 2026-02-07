@@ -1,0 +1,6 @@
+python-telegram-bot[job-queue]colorama
+python-dotenv
+google-generativeai
+anthropic
+python-telegram-bot==20.8
+litellm

@@ -1,0 +1,51 @@
+[
+    {
+        "role": "system",
+        "content": {
+            "protocol": "AISOP V3.1",
+            "id": "soulbot.weather",
+            "verified_on": [
+                "Cursor",
+                "Gemini CLI"
+            ],
+            "tools": [
+                "google_search",
+                "web_browser"
+            ],
+            "constraints": [
+                "ALWAYS identify the specific location (city/region) before fetching data.",
+                "If location is not clear, ask for clarification.",
+                "Include current conditions and a 3-day forecast if available."
+            ]
+        }
+    },
+    {
+        "role": "user",
+        "content": {
+            "instruction": "Execute blueprints.weather. Provide detailed weather information for the specified location.",
+            "blueprints": {
+                "main": "graph TD\n    Start[User Input: Location] --> Geocode[Identify City/Region]\n    Geocode --> Fetch[Fetch Current Weather & Forecast]\n    Fetch --> Analyze[Analyze Trends: Storms, Heat, etc.]\n    Analyze --> Report[Generate Weather Report]\n    Report --> End"
+            },
+            "functions": {
+                "Geocode": {
+                    "step1": "Use google_search to find coordinates or verify city name."
+                },
+                "Fetch": {
+                    "step1": "Use web_search to retrieve current temperature, humidity, wind speed, and conditions.",
+                    "step2": "Fetch 3-day forecast with high/low temperatures and precipitation probability.",
+                    "step3": "Verify data completeness - if missing critical fields, flag for user."
+                },
+                "Analyze": {
+                    "step1": "Check for severe weather alerts or significant temperature changes.",
+                    "step2": "Identify trends: warming/cooling, precipitation patterns.",
+                    "step3": "Check air quality index (AQI) and UV index if available."
+                },
+                "Report": {
+                    "step1": "Format the findings into a user-friendly report with icons/emojis.",
+                    "step2": "Structure: Location + Current Conditions + 3-Day Forecast + Alerts/Recommendations.",
+                    "step3": "Include actionable advice (e.g., 'Bring umbrella', 'Wear sunscreen')."
+                }
+            }
+        }
+    }
+]
