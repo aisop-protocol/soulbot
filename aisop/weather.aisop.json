@@ -1,0 +1,95 @@
+[
+    {
+        "role": "system",
+        "content": {
+            "protocol": "AISOP V1.0.0",
+            "id": "soulbot.weather",
+            "name": "Weather Forecast Service",
+            "version": "2.0.0",
+            "summary": "Enhanced weather information with validation, error handling, and comprehensive analysis.",
+            "description": "Provides current conditions, 7-day forecasts, hourly predictions, weather alerts, and lifestyle recommendations. Supports both metric and imperial units with multi-language location parsing.",
+            "verified_on": [
+                "Cursor",
+                "Gemini CLI"
+            ],
+            "tools": [
+                "google_search",
+                "web_browser",
+                "file_system"
+            ],
+            "parameters": {
+                "location": {
+                    "type": "string",
+                    "description": "City or region name for weather query",
+                    "agentic_prompt": "Identify the city or location mentioned in the user's message.",
+                    "search_prompt": "Extract location name from user query."
+                },
+                "units": {
+                    "type": "string",
+                    "description": "Temperature unit preference: 'metric' (Celsius) or 'imperial' (Fahrenheit)",
+                    "agentic_prompt": "Detect if user prefers Celsius or Fahrenheit from their message."
+                }
+            },
+            "system_prompt": "ALWAYS identify the specific location (city/region) before fetching data. If location is not clear, ask for clarification. Include current conditions and a 7-day forecast if available. CRITICAL: Validate all data before presenting to user. Support both metric (Celsius) and imperial (Fahrenheit) units."
+        }
+    },
+    {
+        "role": "user",
+        "content": {
+            "instruction": "Execute aisop.weather. Provide enhanced weather information with validation, error handling, and comprehensive analysis.",
+            "aisop": {
+                "main": "graph TD\n    Start[User Input: Location] --> ValidateLocation{Validate & Normalize Location}\n    ValidateLocation -- Valid --> Geocode[Identify City/Region & Coordinates]\n    ValidateLocation -- Invalid --> ErrorHandler[Handle Error: Ask for Clarification]\n    Geocode --> UnitPref{Detect Unit Preference}\n    UnitPref --> Fetch[Fetch Current Weather & Extended Forecast]\n    Fetch -- Success --> Analyze[Analyze Weather Patterns & Alerts]\n    Fetch -- Failure --> ErrorHandler\n    Analyze --> EnhancedReport[Generate Enhanced Weather Report]\n    EnhancedReport --> endNode((End))\n    ErrorHandler --> endNode"
+            },
+            "functions": {
+                "Start": {
+                    "step1": "Receive user input with location query"
+                },
+                "ValidateLocation": {
+                    "step1": "Validate city name (support Chinese and English)",
+                    "step2": "Handle fuzzy queries (e.g., 'Beijing' vs 'Beijing City', 'NYC' -> 'New York')",
+                    "step3": "Recognize common aliases and abbreviations (e.g., 'LA' -> 'Los Angeles')",
+                    "step4": "If location is ambiguous, ask user for confirmation"
+                },
+                "Geocode": {
+                    "step1": "Use google_search to find coordinates or verify city name.",
+                    "step2": "Get standardized city name and country/region info",
+                    "step3": "Record geographic location for subsequent queries"
+                },
+                "UnitPref": {
+                    "step1": "Detect user unit preference (identify C/F keywords from query)",
+                    "step2": "Default to Celsius but provide dual-unit display",
+                    "step3": "Convert wind speed (km/h vs mph) and pressure (hPa vs inHg)"
+                },
+                "Fetch": {
+                    "step1": "Use web_search to retrieve current temperature, humidity, wind speed, and conditions.",
+                    "step2": "Fetch 7-day forecast with high/low temperatures and precipitation probability.",
+                    "step3": "Fetch 24-hour hourly forecast data",
+                    "step4": "Verify data completeness - if missing critical fields, flag for user.",
+                    "step5": "Fallback data source switching mechanism (switch when primary fails)"
+                },
+                "ErrorHandler": {
+                    "step1": "Retry 3 times on API failure, then switch to backup data source",
+                    "step2": "Prompt user and explain missing items when data is incomplete",
+                    "step3": "Give friendly prompt on network timeout and provide offline suggestions",
+                    "step4": "Suggest similar city names when city does not exist"
+                },
+                "Analyze": {
+                    "step1": "Check for severe weather alerts or significant temperature changes.",
+                    "step2": "Identify trends: warming/cooling, precipitation patterns.",
+                    "step3": "Check air quality index (AQI) and UV index if available.",
+                    "step4": "Historical comparison: compare with historical average temperature for same period",
+                    "step5": "Support multi-city comparison analysis (2-3 cities)",
+                    "step6": "Weather alert levels (Blue/Yellow/Orange/Red)"
+                },
+                "EnhancedReport": {
+                    "step1": "Format the findings into a user-friendly report with icons/emojis.",
+                    "step2": "Structure: Location + Current Conditions + 7-Day Forecast + Alerts.",
+                    "step3": "24-hour hourly forecast chart",
+                    "step4": "Lifestyle indices: car wash, exercise, cold risk, UV, clothing suggestions",
+                    "step5": "Travel advice: recommend activities and precautions based on weather",
+                    "step6": "Include actionable advice (e.g., 'Bring umbrella', 'Wear sunscreen')."
+                }
+            }
+        }
+    }
+]

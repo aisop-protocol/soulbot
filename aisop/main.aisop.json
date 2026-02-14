@@ -1,0 +1,85 @@
+[
+    {
+        "role": "system",
+        "content": {
+            "protocol": "AISOP V1.0.0",
+            "id": "soulbot.main",
+            "name": "SoulBot Main Router",
+            "version": "1.0.0",
+            "summary": "Main entry point that routes user messages to specialized handlers.",
+            "description": "Analyzes user intent via NLU and routes to appropriate handlers: greetings, Q&A, task execution, stock analysis, or weather queries. Validates required parameters before dispatching to sub-aisops.",
+            "verified_on": [
+                "Cursor",
+                "Gemini CLI"
+            ],
+            "tools": [
+                "google_search",
+                "file_system",
+                "shell",
+                "web_browser"
+            ],
+            "parameters": {
+                "ticker": {
+                    "type": "string",
+                    "description": "Stock ticker symbol (e.g., AAPL, TSLA)",
+                    "agentic_prompt": "Identify the stock ticker mentioned in the user's message.",
+                    "search_prompt": "Extract stock ticker symbol from user query."
+                },
+                "location": {
+                    "type": "string",
+                    "description": "City or region name for weather queries",
+                    "agentic_prompt": "Identify the city or location mentioned in the user's message.",
+                    "search_prompt": "Extract location name from user query."
+                }
+            },
+            "system_prompt": "STRICT ADHERENCE TO AISOP FLOW IS MANDATORY. IF 'Stock' intent -> MUST verify Ticker. IF 'Weather' intent -> MUST verify Location. DO NOT hallucinate data; always route to specialized aisop files if available."
+        }
+    },
+    {
+        "role": "user",
+        "content": {
+            "instruction": "Execute aisop.main. Route to specialized handlers (Stock, Weather) after parameter validation.",
+            "aisop": {
+                "main": "graph TD\n    Start[User Message] --> NLU{Analyze Intent}\n    NLU -- Greeting --> Hello[Respond Warmly]\n    NLU -- Question --> Answer[Answer Directly]\n    NLU -- Task --> Exec[Execute Task]\n    NLU -- Stock --> StockCheck{Has Ticker?}\n    NLU -- Weather --> WeatherCheck{Has Location?}\n    StockCheck -- Yes --> StockFlow[Run stock_analysis.aisop.json]\n    StockCheck -- No --> AskTicker[Ask for Ticker]\n    WeatherCheck -- Yes --> WeatherFlow[Run weather.aisop.json]\n    WeatherCheck -- No --> AskLocation[Ask for Location]\n    Hello --> endNode((End))\n    Answer --> endNode\n    Exec --> endNode\n    StockFlow --> endNode\n    AskTicker --> endNode\n    WeatherFlow --> endNode\n    AskLocation --> endNode"
+            },
+            "functions": {
+                "Start": {
+                    "step1": "Receive user message input"
+                },
+                "NLU": {
+                    "step1": "Analyze user message and identify intent",
+                    "step2": "Classify into: Greeting, Question, Task, Stock, or Weather"
+                },
+                "Hello": {
+                    "step1": "Generate a warm, helpful greeting",
+                    "step2": "Show current timestamp and confirm aisop version."
+                },
+                "Answer": {
+                    "step1": "Respond with direct information"
+                },
+                "Exec": {
+                    "step1": "Execute general tasks"
+                },
+                "StockCheck": {
+                    "step1": "Verify stock ticker presence."
+                },
+                "StockFlow": {
+                    "step1": "Load and run stock_analysis.aisop.json"
+                },
+                "AskTicker": {
+                    "step1": "Ask user for stock ticker."
+                },
+                "WeatherCheck": {
+                    "step1": "Verify city/location presence in query."
+                },
+                "WeatherFlow": {
+                    "step1": "aisop['weather']",
+                    "step2": "Execute weather forecast logic"
+                },
+                "AskLocation": {
+                    "step1": "Ask user for the city or region for weather."
+                }
+            }
+        }
+    }
+]

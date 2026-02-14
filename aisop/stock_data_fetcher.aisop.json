@@ -1,0 +1,73 @@
+[
+    {
+        "role": "system",
+        "content": {
+            "protocol": "AISOP V1.0.0",
+            "id": "soulbot.stock_data_fetcher",
+            "name": "Stock Data Fetcher",
+            "version": "1.0.0",
+            "summary": "Sub-module for fetching real-time stock market data.",
+            "description": "Fetches current price, P/E ratio, market cap, and 52-week range for a given ticker symbol. Returns structured JSON data to the parent aisop (stock_analysis).",
+            "parent": "stock_analysis.aisop.json",
+            "verified_on": [
+                "Cursor",
+                "Gemini CLI"
+            ],
+            "tools": [
+                "google_search",
+                "web_browser",
+                "file_system"
+            ],
+            "parameters": {
+                "ticker": {
+                    "type": "string",
+                    "description": "Stock ticker symbol passed from parent aisop",
+                    "agentic_prompt": "Use the ticker symbol provided by the parent stock_analysis aisop."
+                }
+            },
+            "system_prompt": "You are a stock data fetching specialist. Your task is to fetch real-time market data for the given ticker symbol and return it in structured format."
+        }
+    },
+    {
+        "role": "user",
+        "content": {
+            "instruction": "Execute aisop.stock_data_fetcher. Fetch real-time stock data for the given ticker.",
+            "aisop": {
+                "main": "graph TD\n    Start[Receive Ticker from Parent] --> Validate{Is Ticker Valid?}\n    Validate -- Yes --> FetchPrice[Fetch Current Price]\n    Validate -- No --> Error[Return Error: Invalid Ticker]\n    FetchPrice --> FetchFundamentals[Fetch P/E, Market Cap, 52W Range]\n    FetchFundamentals --> Format[Format Data as JSON]\n    Format --> Return[Return Data to Parent]\n    Return --> endNode((End))\n    Error --> endNode"
+            },
+            "functions": {
+                "Start": {
+                    "step1": "Receive ticker symbol from parent aisop (stock_analysis.aisop.json)",
+                    "step2": "Log: 'Fetching data for ticker: {ticker}'"
+                },
+                "Validate": {
+                    "step1": "Check if ticker is a valid stock symbol (alphanumeric, 1-5 characters)",
+                    "step2": "If invalid, return error message to parent"
+                },
+                "FetchPrice": {
+                    "step1": "Search for '{ticker} stock price' using google_search or web_browser",
+                    "step2": "Extract current price from search results",
+                    "step3": "Extract price change ($ and %)"
+                },
+                "FetchFundamentals": {
+                    "step1": "Fetch P/E ratio from financial data sources",
+                    "step2": "Fetch Market Cap",
+                    "step3": "Fetch 52-week High and Low prices",
+                    "step4": "If data unavailable, mark as 'N/A'"
+                },
+                "Format": {
+                    "step1": "Structure data as JSON:",
+                    "step2": "{\n  \"ticker\": \"{ticker}\",\n  \"price\": \"{price}\",\n  \"change\": \"{change}\",\n  \"pe_ratio\": \"{pe}\",\n  \"market_cap\": \"{market_cap}\",\n  \"52w_high\": \"{high}\",\n  \"52w_low\": \"{low}\"\n}"
+                },
+                "Return": {
+                    "step1": "Log: 'Data fetch complete for {ticker}'",
+                    "step2": "Return formatted JSON to parent aisop"
+                },
+                "Error": {
+                    "step1": "Return error: 'Invalid ticker symbol: {ticker}'",
+                    "step2": "Suggest parent aisop ask user for correct ticker"
+                }
+            }
+        }
+    }
+]

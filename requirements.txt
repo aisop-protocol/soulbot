@@ -1,0 +1,19 @@
+# SoulBot Dependencies
+# Install with: pip install -r requirements.txt
+
+# Telegram Bot
+python-telegram-bot[job-queue]==20.8
+
+# Web Interface
+streamlit>=1.28.0
+
+# LLM Providers
+litellm>=1.0.0
+google-generativeai
+anthropic
+
+# Utilities
+python-dotenv
+
+# Optional: System monitoring (for Monitor page)
+psutil>=5.9.0

@@ -1,0 +1,86 @@
+[
+    {
+        "role": "system",
+        "content": {
+            "protocol": "AISOP V1.0.0",
+            "id": "soulbot.stock_analysis",
+            "name": "Stock Analysis Service",
+            "version": "1.0.0",
+            "summary": "Professional stock analysis with technical, fundamental, and sentiment evaluation.",
+            "description": "Performs comprehensive stock analysis including technical indicators (MA, RSI, support/resistance), fundamental data (P/E, market cap), news sentiment, SWOT matrix, and risk management strategies. Generates buy/hold/sell recommendations with price targets.",
+            "verified_on": [
+                "Cursor",
+                "Gemini CLI"
+            ],
+            "tools": [
+                "google_search",
+                "shell",
+                "file_system",
+                "web_browser"
+            ],
+            "parameters": {
+                "ticker": {
+                    "type": "string",
+                    "description": "Stock ticker symbol (e.g., AAPL, TSLA, GOOGL)",
+                    "agentic_prompt": "Identify the stock ticker symbol from the user's message.",
+                    "search_prompt": "Extract stock ticker symbol from user query."
+                }
+            },
+            "system_prompt": "You are a professional stock analyst. Your task is to provide detailed stock analysis reports. Strictly follow the aisop flow and do not skip any steps."
+        }
+    },
+    {
+        "role": "user",
+        "content": {
+            "instruction": "Execute aisop.stock_analysis. Load sub-module for data fetching.",
+            "aisop": {
+                "main": "graph TD\n    Start[User Input: Stock/Ticker] --> Parse[Identify Ticker & Market]\n    Parse --> LoadDataFetcher{Load stock_data_fetcher.aisop.json}\n    LoadDataFetcher --> Data[Execute Sub-Module: Fetch Data]\n    Data --> Tech[Analyze Technical Trends & Indicators]\n    Tech --> Sentiment[Fetch Recent News & Analyze Sentiment]\n    Sentiment --> Synthesis[Generate SWOT: Strengths, Weaknesses, Ops, Threats]\n    Synthesis --> Risk[Risk Management Strategy]\n    Risk --> Conclusion[Formulate Final Assessment & Disclaimer]\n    Conclusion --> endNode((End))"
+            },
+            "functions": {
+                "Start": {
+                    "step1": "Receive user input with stock ticker symbol"
+                },
+                "Parse": {
+                    "step1": "Verify ticker symbol is valid and identify market (NYSE/NASDAQ/etc).",
+                    "step2": "Determine asset type: Stock, ETF, Index, or other."
+                },
+                "LoadDataFetcher": {
+                    "step1": "aisop['stock_data_fetcher']",
+                    "step2": "Pass ticker symbol to sub-module",
+                    "step3": "Verify sub-module loaded successfully"
+                },
+                "Data": {
+                    "step1": "Execute stock_data_fetcher sub-aisop",
+                    "step2": "Receive data: P/E, Market Cap, 52W High/Low, current price",
+                    "step3": "Verify all critical data fields are present; flag if missing."
+                },
+                "Tech": {
+                    "step1": "Look for MA50/200 crossover, RSI levels, and volume trends.",
+                    "step2": "Calculate support/resistance levels from 52W high/low.",
+                    "step3": "Identify chart patterns: bullish/bearish flags, head-and-shoulders, etc."
+                },
+                "Sentiment": {
+                    "step1": "Scan news from Bloomberg, Reuters, or Yahoo Finance for recent catalysts.",
+                    "step2": "Verify news sources are recent (within 7 days) and credible.",
+                    "step3": "Calculate sentiment score: Positive/Neutral/Negative ratio."
+                },
+                "Synthesis": {
+                    "step1": "Compile Strengths, Weaknesses, Opportunities, and Threats into SWOT matrix.",
+                    "step2": "Assign quantitative scores: Fundamental (0-10), Technical (0-10), Sentiment (0-10).",
+                    "step3": "Calculate overall Risk/Reward ratio based on weighted scores."
+                },
+                "Risk": {
+                    "step1": "Define time horizons: Short-term (1-3 months), Mid-term (3-12 months), Long-term (1+ years).",
+                    "step2": "Suggest position sizing: Conservative/Moderate/Aggressive based on risk scores.",
+                    "step3": "Recommend entry strategy: Lump-sum vs Dollar-Cost-Averaging (DCA)."
+                },
+                "Conclusion": {
+                    "step1": "Provide a summary assessment with Buy/Hold/Sell recommendation for each time horizon.",
+                    "step2": "Include price targets: Upside target, Downside risk, Stop-loss level.",
+                    "step3": "Compare with peers/benchmarks (e.g., SPY, sector average).",
+                    "step4": "CRITICAL: Include 'Not Financial Advice' disclaimer."
+                }
+            }
+        }
+    }
+]
