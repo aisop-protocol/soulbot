@@ -76,6 +76,17 @@ class OpenCodeACPClient:
         import time
         return time.time() - self._last_used > self.config.pool_idle_timeout
 
+    def ping(self) -> bool:
+        """Health check: write empty line to stdin (sync Popen)"""
+        if not self.is_connected:
+            return False
+        try:
+            self.process.stdin.write(b"\n")
+            self.process.stdin.flush()
+            return True
+        except Exception:
+            return False
+
     def _find_opencode_command(self) -> str:
         """查找 opencode 命令"""
         import sys
@@ -119,9 +130,18 @@ class OpenCodeACPClient:
             env["TERM"] = "dumb"
             env["FORCE_COLOR"] = "0"
             env["NO_COLOR"] = "1"
-            # 传递 OpenCode 配置（禁用 title/summary 防止挂起）
-            if os.environ.get("OPENCODE_CONFIG_CONTENT"):
-                env["OPENCODE_CONFIG_CONTENT"] = os.environ["OPENCODE_CONFIG_CONTENT"]
+            # Merge model into OPENCODE_CONFIG_CONTENT (preserve existing config)
+            oc_config = {}
+            existing_config = os.environ.get("OPENCODE_CONFIG_CONTENT")
+            if existing_config:
+                try:
+                    oc_config = json.loads(existing_config)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            if self.config.model:
+                oc_config["model"] = self.config.model
+            if oc_config:
+                env["OPENCODE_CONFIG_CONTENT"] = json.dumps(oc_config)
 
             cwd = self.config.cwd or os.getcwd()
             logger.info(f"[OpenCodeACP] Working directory: {cwd}")
@@ -158,9 +178,13 @@ class OpenCodeACPClient:
             self._stderr_thread.start()
 
             # 初始化（可选择恢复现有 session）
-            await self._initialize(resume_session_id=session_id)
-            self._connected = True
-            self._update_last_used()
+            self._connected = True  # Set BEFORE initialize to prevent pool pruning race
+            try:
+                await self._initialize(resume_session_id=session_id)
+                self._update_last_used()
+            except Exception as init_err:
+                self._connected = False  # Rollback on failure
+                raise
 
             logger.info(f"[OpenCodeACP] Connected, session: {self.session_id}")
             return True
@@ -756,8 +780,9 @@ class OpenCodeConnectionPool:
             # 检查是否有活跃的连接（仅当 session 匹配时）
             if resume_session_id and resume_session_id in self._session_clients:
                 client = self._session_clients[resume_session_id]
-                if not client.is_connected:
+                if not client.is_connected or not client.ping():
                     del self._session_clients[resume_session_id]
+                    await self._safe_disconnect(client)
                     client = None
                 else:
                     logger.info(f"[OpenCodePool] Reusing active connection for session: {resume_session_id}")
@@ -767,7 +792,9 @@ class OpenCodeConnectionPool:
                 # 如果需要恢复特定 session，不使用池中的现有连接
                 if not resume_session_id:
                     client = self._pool.pop(0)
-                    if not client.is_connected:
+                    if not client.is_connected or not client.ping():
+                        if client:
+                            await self._safe_disconnect(client)
                         client = None
 
         # 如果仍然没有连接，创建新的（并恢复 session）
@@ -814,6 +841,13 @@ class OpenCodeConnectionPool:
         """
         async with self.acquire(user_id=user_id) as (client, session_id):
             yield client, session_id
+
+    async def _safe_disconnect(self, client):
+        """Safely disconnect a client, logging errors"""
+        try:
+            await client.disconnect()
+        except Exception as e:
+            logger.warning(f"[OpenCodePool] Error during disconnect: {e}")
 
     async def close_all(self):
         """关闭所有连接"""

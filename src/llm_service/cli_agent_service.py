@@ -107,6 +107,17 @@ class ACPClientBase(ABC):
     def is_idle_timeout(self) -> bool:
         return time.time() - self._last_used > self.config.pool_idle_timeout
 
+    async def ping(self) -> bool:
+        """Health check: write empty line to stdin"""
+        if not self.is_connected:
+            return False
+        try:
+            self.process.stdin.write(b"\n")
+            await self.process.stdin.drain()
+            return True
+        except Exception:
+            return False
+
     def _ensure_session_dir(self) -> Optional[str]:
         """
         Phase 83: 确保 session 目录存在并包含最新的凭据文件
@@ -210,14 +221,19 @@ class ACPClientBase(ABC):
 
             # 初始化
             logger.info("[ACP] Initializing session...")
-            await self._initialize()
-            self._connected = True
-            self._last_used = time.time()
+            self._connected = True  # Set BEFORE initialize to prevent pool pruning race
+            try:
+                await self._initialize()
+                self._last_used = time.time()
+            except Exception as init_err:
+                self._connected = False  # Rollback on failure
+                raise
 
             logger.info(f"[ACP] {self.config.provider.value} connected, session: {self.session_id}")
             return True
 
         except Exception as e:
+            self._connected = False
             logger.error(f"[ACP] Failed to connect {self.config.provider.value} (cmd={' '.join(cmd)}): {e}", exc_info=True)
             return False
 
@@ -411,13 +427,9 @@ class ACPClientBase(ABC):
                     logger.warning(f"[{self.cli_name}ACP] 检测到认证错误，尝试自动启动登录...")
                     self._trigger_auto_login()
 
-                    # 清除连接池缓存，确保下次请求使用新凭据
-                    try:
-                        from .litellm_acp_provider import clear_claude_pool
-                        clear_claude_pool()  # 清除默认池
-                        logger.info(f"[{self.cli_name}ACP] 连接池已清除，下次请求将使用新凭据")
-                    except Exception as e:
-                        logger.debug(f"[{self.cli_name}ACP] 清除连接池失败: {e}")
+                    # Mark this connection as disconnected so pool will discard it
+                    self._connected = False
+                    logger.info(f"[{self.cli_name}ACP] Connection marked disconnected for pool cleanup")
 
                     friendly_msg = (
                         f"[{self.cli_name}] 认证失败，已自动打开登录页面。\n"
@@ -1248,13 +1260,20 @@ class ACPConnectionPool:
                 for i, c in enumerate(self._pool):
                     if c.is_connected and c.session_id == session_id:
                         client = self._pool.pop(i)
+                        # Ping health check before reuse
+                        if not await client.ping():
+                            await self._safe_disconnect(client)
+                            client = None
+                            continue
                         logger.info(f"[ACPPool] Reusing client with matching session_id={session_id[:12]}...")
                         break
 
             # 如果没找到匹配的，取第一个可用的
             if not client and self._pool:
                 client = self._pool.pop(0)
-                if not client.is_connected:
+                if not client.is_connected or not await client.ping():
+                    if client:
+                        await self._safe_disconnect(client)
                     client = None
 
         # 如果没有可用连接，创建新连接
@@ -1308,6 +1327,13 @@ class ACPConnectionPool:
             for client in self._pool:
                 await client.disconnect()
             self._pool.clear()
+
+    async def _safe_disconnect(self, client):
+        """Safely disconnect a client, logging errors"""
+        try:
+            await client.disconnect()
+        except Exception as e:
+            logger.warning(f"[ACPPool] Error during disconnect: {e}")
 
 
 def _npm_install_global(package: str) -> bool:

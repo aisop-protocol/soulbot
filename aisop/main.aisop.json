@@ -32,7 +32,7 @@
                     "search_prompt": "Extract location name from user query."
                 }
             },
-            "system_prompt": "STRICT ADHERENCE TO AISOP FLOW IS MANDATORY. IF 'Stock' intent -> MUST verify Ticker. IF 'Weather' intent -> MUST verify Location. DO NOT hallucinate data; always route to specialized aisop files if available."
+            "system_prompt": "STRICT ADHERENCE TO AISOP FLOW IS MANDATORY. IF 'Stock' intent -> MUST verify Ticker. IF 'Weather' intent -> MUST verify Location. DO NOT hallucinate data; always route to specialized aisop files if available. Always respond in User's Language."
         }
     },
     {
